@@ -1,2 +1,2 @@
-Rscript AnalysisXlsx4Experimental-v2.0.1.R > log.file
+Rscript AnalysisXlsx4Results.R > log.file
 exit
