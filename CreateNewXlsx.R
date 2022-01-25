@@ -1,146 +1,310 @@
-options("repos" = c(CRAN="https://mirror.lzu.edu.cn/CRAN/"))
-if(!require(xlsx)){install.packages("xlsx")}
 
-# groupNum: 实验组别数
+options("repos" = c(CRAN="https://mirror.lzu.edu.cn/CRAN/"))
+if(!require(openxlsx)){install.packages("openxlsx")}
+
+###################################
+###################################
+####### create record file ########
+###################################
+###################################
+# groupNum: 组别数
 groupNum = 5
 # repNum: 每个组别中重复样本数
 repNum = 10
 # weekNum: 预计记录周期
 weekNum = 5
-# DaysPerWeek : 每周记录天数
-DaysPerWeek = 2
+# FreqWeek：预计每周记录频次（默认每周记录两次）
+FreqWeek = 2
+
+
+# treatNum：预计所有处理类型的数目
+# 当某个组别同时又不同处理条件时，使用该参数
+# 该参数默认与 groupNum 数值相等。
+treatNum = groupNum
+#treatNum = 7
 
 samples = groupNum * repNum
-days = weekNum * DaysPerWeek
+days = weekNum * FreqWeek
 
-library(xlsx)
-wb <- createWorkbook()
-sheet1 <- createSheet(wb, sheetName="基本信息")
-sheet2 <- createSheet(wb, sheetName="个体数据")
+library(openxlsx)
+wb <- openxlsx::createWorkbook()
+sheet1 <- openxlsx::addWorksheet(wb, sheetName="BasicInfos", gridLines = FALSE)
+sheet2 <- openxlsx::addWorksheet(wb, sheetName="DosingRecords", gridLines = FALSE)
+sheet3 <- openxlsx::addWorksheet(wb, sheetName="SampleList", gridLines = FALSE)
+sheet4 <- openxlsx::addWorksheet(wb, sheetName="DataRecords", gridLines = FALSE)
+
+###########################
+### Start of BasicInfos ###
+###########################
+
+## subject infos ##
+subStyle <- openxlsx::createStyle(fontSize = 14, textDecoration = "bold", halign="left", valign="center")
+
+openxlsx::mergeCells(wb, sheet1, cols=1:3, rows=2)
+openxlsx::writeData(wb, sheet1, x="General infos", startCol=1, startRow = 2)
+openxlsx::addStyle(wb, sheet1, subStyle, rows = 2, cols = 1, gridExpand = FALSE, stack = TRUE)
+openxlsx::setRowHeights(wb, sheet1, rows=2, heights=20)
+
+for(i in 3:5){
+	openxlsx::mergeCells(wb, sheet1, cols=1:2, rows=i)
+	openxlsx::mergeCells(wb, sheet1, cols=3:21, rows=i)
+}
+subData1 <- data.frame(matrix(rep("", 63),nrow=3,ncol=21))
+subData1$X1 = c("Study Number:", "Title:", "Objective:")
+#subData1$X3 = c("1", "2", "3")
+openxlsx::writeData(wb, sheet1, subData1, startCol = 1, startRow = 3, rowNames = FALSE, colNames = FALSE, borders = "surrounding", borderColour = "black")
+textLeftAlign = openxlsx::createStyle(halign="right", valign="center")
+openxlsx::addStyle(wb, sheet1, textLeftAlign, rows = 3:5, cols = 1, gridExpand = FALSE, stack = TRUE)
+
+## personel ##
+subStyle1 <- openxlsx::createStyle(fontSize = 12, textDecoration = "bold", halign="left", valign="center")
+hs1 <- openxlsx::createStyle(fgFill = "#D3D3D3", halign = "CENTER", border=c("top","left","right") , borderColour=c("black","white","white"))
+hs1add = openxlsx::createStyle(border=c("left","right"), borderColour="black")
+
+openxlsx::mergeCells(wb, sheet1, cols=1:3, rows=7)
+openxlsx::writeData(wb, sheet1, x="Personel", startCol=1, startRow = 7)
+openxlsx::conditionalFormatting(wb, sheet1, cols=1, rows=7, rule = "!=0", style = subStyle1)
+openxlsx::setRowHeights(wb, sheet1, rows=7, heights = 15)
+
+for(ii in 8:13){
+	openxlsx::mergeCells(wb, sheet1, cols=1:3, rows=ii)
+	openxlsx::mergeCells(wb, sheet1, cols=4:8, rows=ii)
+	openxlsx::mergeCells(wb, sheet1, cols=9:13, rows=ii)
+}
+subData2 <- data.frame(matrix(rep("", 65),nrow=5,ncol=13))
+colnames(subData2)[1] = "Role"
+colnames(subData2)[4] = "Name"
+colnames(subData2)[9] = "Contact"
+subData2$Role = c("Study Director", "Technician Group Leader", "Lab Technician", "Lab Technician", "Lab Technician")
+
+openxlsx::writeData(wb, sheet1, subData2, startCol = 1, startRow = 8, rowNames = FALSE, colNames = TRUE, 
+			borders = "surrounding", borderColour = "black", headerStyle = hs1)
+openxlsx::addStyle(wb, sheet1, createStyle(border=c("left"), borderColour="black"), rows = 8, cols = 1, gridExpand = TRUE, stack = TRUE)
+openxlsx::addStyle(wb, sheet1, createStyle(border=c("right"), borderColour="black"), rows = 8, cols = 13, gridExpand = TRUE, stack = TRUE)
+openxlsx::addStyle(wb, sheet1, createStyle(halign = "CENTER",valign = "CENTER"), rows = 9:13, cols = 2:13, gridExpand = TRUE, stack = TRUE)
+
+## Treatments ##
+openxlsx::mergeCells(wb, sheet1, cols=1:3, rows=15)
+openxlsx::writeData(wb, sheet1, x="Treatments", startCol=1, startRow = 15)
+openxlsx::conditionalFormatting(wb, sheet1, cols=1, rows=15, rule = "!=0", style = subStyle1)
+openxlsx::setRowHeights(wb, sheet1, rows=7, heights = 15)
+
+for(iii in 16:(16+treatNum)){
+	openxlsx::mergeCells(wb, sheet1, cols=1:3, rows=iii)
+	openxlsx::mergeCells(wb, sheet1, cols=4:13, rows=iii)
+}
+subData3 <- data.frame(matrix(rep("", treatNum*13),nrow=treatNum,ncol=13))
+colnames(subData3)[1] = "Group"
+colnames(subData3)[4] = "Treatment"
+openxlsx::writeData(wb, sheet1, subData3, startCol = 1, startRow = 16, rowNames = FALSE, colNames = TRUE, 
+			borders = "surrounding", borderColour = "black", headerStyle = hs1)
+openxlsx::addStyle(wb, sheet1, createStyle(border=c("left"), borderColour="black"), rows = 16, cols = 1, gridExpand = TRUE, stack = TRUE)
+openxlsx::addStyle(wb, sheet1, createStyle(border=c("right"), borderColour="black"), rows = 16, cols = 13, gridExpand = TRUE, stack = TRUE)
+
+#########################
+### End of BasicInfos ###
+#########################
+
+##################################
+###  Start of Dosing Records   ###
+##################################
+subStyle3 <- openxlsx::createStyle(fontSize = 16, textDecoration = "bold", halign="center", valign="center")
+subStyle4 <- openxlsx::createStyle(border = c("top", "bottom", "left", "right"), fgFill = "#D3D3D3", halign="center", valign="center")
+
+openxlsx::mergeCells(wb, sheet2, cols=1:8, rows=1)
+openxlsx::writeData(wb, sheet2, x="Dosing record", startCol=1, startRow = 1)
+openxlsx::addStyle(wb, sheet2, subStyle3, rows = 1, cols = 1, gridExpand = FALSE, stack = TRUE)
+openxlsx::setRowHeights(wb, sheet2, rows=1, heights=20)
+
+openxlsx::mergeCells(wb, sheet2, cols=1:2, rows=2)
+openxlsx::writeData(wb, sheet2, x="Study Number:", startCol=1, startRow = 2)
+openxlsx::mergeCells(wb, sheet2, cols=3:10, rows=2)
+openxlsx::writeFormula(wb, sheet2, x="=BasicInfos!C3", startCol=3, startRow = 2)
+
+### legend ###
+noteData = matrix(c("Note", "V", "dosed", "", "Note", "NA", "No dosing per protocol", "", "Note", "Holiday", "Holiday", ""), nrow=3, byrow=T)
+openxlsx::mergeCells(wb, sheet2, cols=3:4, rows=3)
+openxlsx::mergeCells(wb, sheet2, cols=3:4, rows=4)
+openxlsx::mergeCells(wb, sheet2, cols=3:4, rows=5)
+openxlsx::writeData(wb, sheet2, noteData, startCol=1, startRow = 3, colNames = FALSE, rowNames = FALSE, 
+			borders = "columns", borderColour = "black", headerStyle = hs1)
+openxlsx::mergeCells(wb, sheet2, cols=1, rows=3:5)
+openxlsx::addStyle(wb, sheet2, createStyle(border="bottom"), rows = 3:4, cols = 1:4, gridExpand = TRUE, stack = TRUE)
+openxlsx::addStyle(wb, sheet2, createStyle(halign="center",valign="center",border="bottom"), rows = 3:5, cols = 1:2, gridExpand = TRUE, stack = TRUE)
+
+openxlsx::setColWidths(wb, sheet2, cols = 6:(days+5), widths = 14)
+openxlsx::mergeCells(wb, sheet2, cols=6:(days+5), rows=5)
+openxlsx::writeData(wb, sheet2, x="Dates/Study Days", startCol=6, startRow = 5)
+openxlsx::addStyle(wb, sheet2, subStyle4, rows = 5, cols = 6:(days+5), gridExpand = TRUE, stack = TRUE)
+for(j in 1:days){
+	#prjnt(j)
+	openxlsx::writeData(wb, sheet2, x="Date:", startCol=(j-1)+6, startRow = 6)
+	openxlsx::addStyle(wb, sheet2, createStyle(border = c("top", "bottom", "left", "right"), fgFill = "#D3D3D3"), rows = 5, cols = (j-1)+6, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet2, x="Days:", startCol=(j-1)+6, startRow = 7)
+	openxlsx::addStyle(wb, sheet2, createStyle(border = c("top", "bottom", "left", "right"), fgFill = "#D3D3D3"), rows = 6, cols = (j-1)+6, gridExpand = TRUE, stack = TRUE)
+}
+subData4 <- data.frame(matrix(rep("", treatNum*repNum*days),nrow=treatNum*repNum,ncol=days))
+openxlsx::writeData(wb, sheet2, subData4, startCol = 6, startRow = 8, rowNames = FALSE, colNames = FALSE, 
+			borders = "rows", borderColour = "black", borderStyle="dashed")
+openxlsx::addStyle(wb, sheet2, createStyle(halign="center", valign="center"), rows = 8:(8+treatNum*repNum - 1), cols = 6:(6+days - 1), gridExpand = TRUE, stack = TRUE)			
+for(ji in 1:days){
+	openxlsx::addStyle(wb, sheet2, createStyle(border="right"), rows = 8:(8+treatNum*repNum - 1), cols = 5+ji, gridExpand = TRUE, stack = TRUE)
+}
+for(jk in 1:treatNum){
+	openxlsx::addStyle(wb, sheet2, createStyle(border="bottom"), rows = jk*repNum + 7, cols = 6:(6+days - 1), gridExpand = TRUE, stack = TRUE)
+}
+
+openxlsx::writeData(wb, sheet2, x="Group", startCol=1, startRow = 7)
+openxlsx::addStyle(wb, sheet2, subStyle4, rows = 7, cols = 1, gridExpand = TRUE, stack = TRUE)
+openxlsx::mergeCells(wb, sheet2, cols=2:4, rows=7)
+openxlsx::writeData(wb, sheet2, x="Article", startCol=2, startRow = 7)
+openxlsx::addStyle(wb, sheet2, subStyle4, rows = 7, cols = 2:4, gridExpand = TRUE, stack = TRUE)
+openxlsx::writeData(wb, sheet2, x="SampleID", startCol=5, startRow = 7)
+openxlsx::addStyle(wb, sheet2, subStyle4, rows = 7, cols = 5, gridExpand = TRUE, stack = TRUE)
+
+openxlsx::setColWidths(wb, sheet2, cols = 1:5, widths = 13)
+startRowID = 8
+for(k in 1:treatNum){
+	openxlsx::mergeCells(wb, sheet2, cols=1, rows=(startRowID+repNum*(k-1)):(startRowID+repNum*k-1))
+	openxlsx::addStyle(wb, sheet2, createStyle(border = c("bottom", "left", "top", "right"),halign="center", valign="center"), rows = (startRowID+repNum*(k-1)):(startRowID+repNum*k-1), cols = 1, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeFormula(wb, sheet2, x=paste0("=BasicInfos!A", k+16), startCol=1, startRow = startRowID+repNum*(k-1))
+	openxlsx::mergeCells(wb, sheet2, cols=2:4, rows=(startRowID+repNum*(k-1)):(startRowID+repNum*k-1))
+	openxlsx::addStyle(wb, sheet2, createStyle(border = c("bottom", "left", "top", "right"),halign="center", valign="center", wrapText=TRUE), rows = (startRowID+repNum*(k-1)):(startRowID+repNum*k-1), cols = 2:4, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeFormula(wb, sheet2, x=paste0("=BasicInfos!D", k+16), startCol=2, startRow = startRowID+repNum*(k-1))
+	openxlsx::addStyle(wb, sheet2, createStyle(border = c("bottom", "left", "top", "right"),halign="center", valign="center"), rows = (startRowID+repNum*(k-1)):(startRowID+repNum*k-1), cols = 5, gridExpand = TRUE, stack = TRUE)
+	for(kk in 1:repNum){
+		writeData(wb, sheet2, x="", startCol=5, startRow = startRowID+(k-1)*repNum+(kk-1))
+	}
+}
+
+################################
+###  End of Dosing Records   ###
+################################
+
+##################################
+#####  Start of SampleList   #####
+##################################
+
+openxlsx::mergeCells(wb, sheet3, cols=1:8, rows=1)
+openxlsx::writeData(wb, sheet3, x="Sample List", startCol=1, startRow = 1)
+openxlsx::addStyle(wb, sheet3, subStyle3, rows = 1, cols = 1, gridExpand = FALSE, stack = TRUE)
+openxlsx::setRowHeights(wb, sheet3, rows=1, heights=20)
+
+openxlsx::mergeCells(wb, sheet3, cols=1:2, rows=2)
+openxlsx::writeData(wb, sheet3, x="Study Number:", startCol=1, startRow = 2)
+openxlsx::mergeCells(wb, sheet3, cols=3:10, rows=2)
+openxlsx::writeFormula(wb, sheet3, x="=BasicInfos!C3", startCol=3, startRow = 2)
+
+### legend ###
+noteData2 = matrix(c("Dissection", "Y", "Yes", "Dissection", "N", "No"), nrow=2, byrow=T)
+openxlsx::writeData(wb, sheet3, noteData2, startCol=1, startRow = 3, colNames = FALSE, rowNames = FALSE, 
+			borders = "columns", borderColour = "black", headerStyle = hs1)
+openxlsx::mergeCells(wb, sheet3, cols=1, rows=3:4)
+openxlsx::addStyle(wb, sheet3, createStyle(border="bottom"), rows = 3, cols = 1:3, gridExpand = TRUE, stack = TRUE)
+openxlsx::addStyle(wb, sheet3, createStyle(halign="center",valign="center",border="bottom"), rows = 3:4, cols = 1:3, gridExpand = TRUE, stack = TRUE)
+
+headerList = c("Group", "SampleID", "Heart", "Liver", "Lung", "Kidney", "Stomach")
+openxlsx::setColWidths(wb, sheet3, cols = 1:(length(headerList)+5), widths = 14)
+for(hL in 1:length(headerList)){
+	openxlsx::writeData(wb, sheet3, x=headerList[hL], startCol=hL, startRow = 7)
+}
+openxlsx::addStyle(wb, sheet3, subStyle4, rows = 7, cols = 1:length(headerList), gridExpand = TRUE, stack = TRUE)
+
+subData42 <- data.frame(matrix(rep("", groupNum*repNum*(length(headerList)-2)),nrow=groupNum*repNum,ncol=length(headerList)-2))
+openxlsx::writeData(wb, sheet3, subData42, startCol = 3, startRow = 8, rowNames = FALSE, colNames = FALSE, 
+			borders = "rows", borderColour = "black", borderStyle="dashed")
+openxlsx::addStyle(wb, sheet3, createStyle(halign="center", valign="center"), rows = 8:(8+groupNum*repNum - 1), cols = 1:length(headerList), gridExpand = TRUE, stack = TRUE)			
+for(hi in 1:length(headerList)){
+	openxlsx::addStyle(wb, sheet3, createStyle(border="right"), rows = 8:(8+groupNum*repNum - 1), cols = hi, gridExpand = TRUE, stack = TRUE)
+}
+for(hk in 1:groupNum){
+	openxlsx::mergeCells(wb, sheet3, cols=1, rows=(8+repNum*(hk-1)):(8+repNum*hk-1))
+	openxlsx::addStyle(wb, sheet3, createStyle(border="bottom"), rows = hk*repNum + 7, cols = 1:length(headerList), gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeFormula(wb, sheet3, x=paste0("=BasicInfos!A", hk+16), startCol=1, startRow = 8+repNum*(hk-1))
+	for(hkk in 1:repNum){
+		openxlsx::writeFormula(wb, sheet3, x=paste0("=DosingRecords!E", 8+(hk-1)*repNum+(hkk-1)), startCol=2, startRow = 8+(hk-1)*repNum+(hkk-1))
+		openxlsx::addStyle(wb, sheet3, createStyle(border="bottom"), rows = 8+(hk-1)*repNum+(hkk-1), cols = 2, gridExpand = TRUE, stack = TRUE)
+	}
+}
 
 
-cb1 <- CellBlock(sheet1, 2, 1, samples + groupNum + 20, 8+days+3)
-cs1 <- CellStyle(wb) + Alignment(h = "ALIGN_CENTER", v="VERTICAL_CENTER") + Fill(foregroundColor = "#E2EFDA", backgroundColor="#E2EFDA")
-cs11 <- CellStyle(wb) + Alignment(h = "ALIGN_LEFT", v="VERTICAL_CENTER") + Fill(foregroundColor = "#E2EFDA", backgroundColor="#E2EFDA")
-cs2 <- CellStyle(wb) + Alignment(h = "ALIGN_CENTER", v="VERTICAL_CENTER") + Fill(foregroundColor = "#D9E1F2", backgroundColor="#D9E1F2")
-cs3 <- CellStyle(wb) + Alignment(h = "ALIGN_CENTER", v="VERTICAL_CENTER") + Fill(foregroundColor = "#FFF2CC", backgroundColor="#FFF2CC")
-cs4 <- CellStyle(wb) + Alignment(h = "ALIGN_CENTER", v="VERTICAL_CENTER") + Fill(foregroundColor = "#D6DCE4", backgroundColor="#D6DCE4")
+################################
+#####  End of SampleList   #####
+################################
 
-cb2 <- CellBlock(sheet2, 2, 1, samples + 5, weekNum*2*5 + 3)
-cs <- CellStyle(wb) + Alignment(h = "ALIGN_CENTER", v="VERTICAL_CENTER") 
+##################################
+###  Start of Data Records   #####
+##################################
 
-### 基本信息
-# 项目信息
-addMergedRegion(sheet1, 2, 2, 1, 12)
-CB.setColData(cb1, "项目信息", colIndex = 1, rowOffset = 0, colStyle = cs1)
-CB.setBorder(cb1, Border(color = "black",position=c("BOTTOM")), 1, 1:12)
-CB.setColData(cb1, "项目编号：", colIndex = 1, rowOffset = 1, colStyle = cs11)
-addMergedRegion(sheet1, 3, 3, 2, 12)
-CB.setColData(cb1, "", colIndex = 2, rowOffset = 1, colStyle = cs11)
-CB.setColData(cb1, "标题：", colIndex = 1, rowOffset = 2, colStyle = cs11)
-addMergedRegion(sheet1, 4, 4, 2, 12)
-CB.setColData(cb1, "", colIndex = 2, rowOffset = 2, colStyle = cs11)
-CB.setColData(cb1, "研究目的：", colIndex = 1, rowOffset = 3, colStyle = cs11)
-addMergedRegion(sheet1, 5, 5, 2, 12)
-CB.setColData(cb1, "", colIndex = 2, rowOffset = 3, colStyle = cs11)
+openxlsx::mergeCells(wb, sheet4, cols=1:8, rows=1)
+openxlsx::writeData(wb, sheet4, x="Data record", startCol=1, startRow = 1)
+openxlsx::addStyle(wb, sheet4, subStyle3, rows = 1, cols = 1, gridExpand = FALSE, stack = TRUE)
+openxlsx::setRowHeights(wb, sheet4, rows=1, heights=20)
 
-# 参与人员
-addMergedRegion(sheet1, 7, 7, 1, 12)
-CB.setColData(cb1, "参与人员", colIndex = 1, rowOffset = 5, colStyle = cs2)
-addMergedRegion(sheet1, 8, 8, 1, 3)
-CB.setColData(cb1, "职位", colIndex = 1, rowOffset = 6, colStyle = cs2)
-CB.setBorder(cb1, Border(color = "black",position=c("TOP","BOTTOM")), 7, 1:3)
-addMergedRegion(sheet1, 8, 8, 4, 7)
-CB.setColData(cb1, "名称", colIndex = 4, rowOffset = 6, colStyle = cs2)
-CB.setBorder(cb1, Border(color = "black",position=c("TOP","BOTTOM")), 7, 4:7)
-addMergedRegion(sheet1, 8, 8, 8, 12)
-CB.setColData(cb1, "联系方式", colIndex = 8, rowOffset = 6, colStyle = cs2)
-CB.setBorder(cb1, Border(color = "black",position=c("TOP","BOTTOM")), 7, 8:12)
+openxlsx::mergeCells(wb, sheet4, cols=1:2, rows=2)
+openxlsx::writeData(wb, sheet4, x="Study Number:", startCol=1, startRow = 2)
+openxlsx::mergeCells(wb, sheet4, cols=3:10, rows=2)
+openxlsx::writeFormula(wb, sheet4, x="=BasicInfos!C3", startCol=3, startRow = 2)
 
-addMergedRegion(sheet1, 9, 9, 1, 3)
-CB.setColData(cb1, "项目负责人", colIndex = 1, rowOffset = 7, colStyle = cs2)
-addMergedRegion(sheet1, 9, 9, 4, 7)
-CB.setColData(cb1, "", colIndex = 4, rowOffset = 7, colStyle = cs2)
-addMergedRegion(sheet1, 9, 9, 8, 12)
-CB.setColData(cb1, "", colIndex = 8, rowOffset = 7, colStyle = cs2)
+openxlsx::setColWidths(wb, sheet4, cols = 1:(4*days+2), widths = 14)
+for(m in 1:days){
+	openxlsx::mergeCells(wb, sheet4, cols=((m-1)*4+3):(m*4+2), rows=4)
+	openxlsx::mergeCells(wb, sheet4, cols=((m-1)*4+3):(m*4+2), rows=5)
+	openxlsx::writeData(wb, sheet4, x="Dosing Date:", startCol=(m-1)*4+3, startRow = 4)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 4, cols = ((m-1)*4+3):(m*4+2), gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet4, x="Days:", startCol=(m-1)*4+3, startRow = 5)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 5, cols = ((m-1)*4+3):(m*4+2), gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet4, x="BodyWeight(g)", startCol=(m-1)*4+3, startRow = 6)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = (m-1)*4+3, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet4, x="Length(mm)", startCol=(m-1)*4+4, startRow = 6)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = (m-1)*4+4, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet4, x="Width(mm)", startCol=(m-1)*4+5, startRow = 6)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = (m-1)*4+5, gridExpand = TRUE, stack = TRUE)
+	openxlsx::writeData(wb, sheet4, x="TV(mm3)", startCol=(m-1)*4+6, startRow = 6)
+	openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = (m-1)*4+6, gridExpand = TRUE, stack = TRUE)
+}
+subData5 <- data.frame(matrix(rep("", groupNum*repNum*days*4),nrow=groupNum*repNum,ncol=days*4))
+openxlsx::writeData(wb, sheet4, subData5, startCol = 3, startRow = 7, rowNames = FALSE, colNames = FALSE, 
+			borders = "all", borderColour = "black")
+openxlsx::addStyle(wb, sheet4, createStyle(halign="center", valign="center"), rows = 7:(7+groupNum*repNum - 1), cols = 3:(3+days*4 - 1), gridExpand = TRUE, stack = TRUE)	
+colList <- toupper(letters)
+for(s in 1:length(letters)){
+	for(t in 1:length(letters)){
+		colList <- c(colList, paste0(toupper(letters)[s],toupper(letters)[t]))
+	}
+}
+for(p in 1:days){
+	for(q in 7:(7+groupNum*repNum - 1)){
+		preOne = (p-1)*4+6 - 2
+		preTwo = (p-1)*4+6 - 1
+		openxlsx::writeFormula(wb, sheet4, x=paste0("=",colList[preOne],q,"*",colList[preTwo],q,"*",colList[preTwo],q,"/2"), startCol=(p-1)*4+6, startRow = q)
+	}
+}
 
-addMergedRegion(sheet1, 10, 10, 1, 3)
-CB.setColData(cb1, "技术负责人", colIndex = 1, rowOffset = 8, colStyle = cs2)
-addMergedRegion(sheet1, 10, 10, 4, 7)
-CB.setColData(cb1, "", colIndex = 4, rowOffset = 8, colStyle = cs2)
-addMergedRegion(sheet1, 10, 10, 8, 12)
-CB.setColData(cb1, "", colIndex = 8, rowOffset = 8, colStyle = cs2)
-
-addMergedRegion(sheet1, 11, 11, 1, 3)
-CB.setColData(cb1, "实验员", colIndex = 1, rowOffset = 9, colStyle = cs2)
-addMergedRegion(sheet1, 11, 11, 4, 7)
-CB.setColData(cb1, "", colIndex = 4, rowOffset = 9, colStyle = cs2)
-addMergedRegion(sheet1, 11, 11, 8, 12)
-CB.setColData(cb1, "", colIndex = 8, rowOffset = 9, colStyle = cs2)
-
-addMergedRegion(sheet1, 12, 12, 1, 3)
-CB.setColData(cb1, "实验员", colIndex = 1, rowOffset = 10, colStyle = cs2)
-addMergedRegion(sheet1, 12, 12, 4, 7)
-CB.setColData(cb1, "", colIndex = 4, rowOffset = 10, colStyle = cs2)
-addMergedRegion(sheet1, 12, 12, 8, 12)
-CB.setColData(cb1, "", colIndex = 8, rowOffset = 10, colStyle = cs2)
-
-addMergedRegion(sheet1, 13, 13, 1, 3)
-CB.setColData(cb1, "实验员", colIndex = 1, rowOffset = 11, colStyle = cs2)
-addMergedRegion(sheet1, 13, 13, 4, 7)
-CB.setColData(cb1,"", colIndex = 4, rowOffset = 11, colStyle = cs2)
-addMergedRegion(sheet1, 13, 13, 8, 12)
-CB.setColData(cb1,"", colIndex = 8, rowOffset = 11, colStyle = cs2)
-
-CB.setBorder(cb1, Border(color = "black",position=c("RIGHT")), 7:12, 3)
-CB.setBorder(cb1, Border(color = "black",position=c("RIGHT")), 7:12, 7)
-CB.setBorder(cb1, Border(color = "black",position=c("BOTTOM")), 12, 1:12)
-
-# 分组及给药情况
-addMergedRegion(sheet1, 15, 15, 1, 12)
-CB.setColData(cb1, "分组及给药情况", colIndex = 1, rowOffset = 13, colStyle = cs3)
-addMergedRegion(sheet1, 16, 16, 1, 3)
-CB.setColData(cb1, "组别", colIndex = 1, rowOffset = 14, colStyle = cs3)
-CB.setBorder(cb1, Border(color = "black",position=c("TOP","BOTTOM")), 15, 1:3)
-addMergedRegion(sheet1, 16, 16, 4, 12)
-CB.setColData(cb1, "给药情况", colIndex = 4, rowOffset = 14, colStyle = cs3)
-CB.setBorder(cb1, Border(color = "black",position=c("TOP","BOTTOM")), 15, 4:12)
-
+openxlsx::writeData(wb, sheet4, x="Group", startCol=1, startRow = 6)
+openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = 1, gridExpand = TRUE, stack = TRUE)
+openxlsx::writeData(wb, sheet4, x="SampleID", startCol=2, startRow = 6)
+openxlsx::addStyle(wb, sheet4, subStyle4, rows = 6, cols = 2, gridExpand = TRUE, stack = TRUE)
+startRowID = 7
 for(n in 1:groupNum){
-	addMergedRegion(sheet1, 16+n, 16+n, 1, 3)
-	CB.setColData(cb1, "", colIndex = 1, rowOffset = 14+n, colStyle = cs3)
-	addMergedRegion(sheet1, 16+n, 16+n, 4, 12)
-	CB.setColData(cb1, "", colIndex = 4, rowOffset = 14+n, colStyle = cs3)
-}
-CB.setBorder(cb1, Border(color = "black",position=c("RIGHT")), 15:(15+n), 3)
-CB.setBorder(cb1, Border(color = "black",position=c("BOTTOM")), 15+n, 1:12)
-
-
-# 个体数据
-for(i in 1:(weekNum*2)){
-	#print(i)
-	addMergedRegion(sheet2, 2, 2, (i-1)*5 + 2, i*5 + 1)
-	addMergedRegion(sheet2, 3, 3, (i-1)*5 + 2, i*5 + 1)
-	CB.setColData(cb2, "日期：", (i-1)*5 + 2, colStyle = cs)
-	CB.setColData(cb2, "治疗天数：", rowOffset = 1, (i-1)*5 + 2, colStyle = cs)
-	CB.setColData(cb2, "动物编号", rowOffset = 2, (i-1)*5 + 2, colStyle = cs)
-	CB.setColData(cb2, "体重(g)", rowOffset = 2, (i-1)*5 + 3, colStyle = cs)
-	CB.setColData(cb2, "长径(mm)", rowOffset = 2, (i-1)*5 + 4, colStyle = cs)
-	CB.setColData(cb2, "短径(mm)", rowOffset = 2, (i-1)*5 + 5, colStyle = cs)
-	CB.setColData(cb2, "TV(mm3)", rowOffset = 2, (i-1)*5 + 6, colStyle = cs)
-}
-border = Border(color="black", position=c("TOP", "BOTTOM", "LEFT", "RIGHT"))
-CB.setBorder(cb2, border, 4: (3+samples), 1)
-for(k in 1:(samples + 3)){
-	CB.setBorder(cb2, border, k, 2:(weekNum*2*5 + 1))
+	openxlsx::mergeCells(wb, sheet4, cols=1, rows=(startRowID+repNum*(n-1)):(startRowID+repNum*n-1))
+	openxlsx::addStyle(wb, sheet4, createStyle(border = c("bottom", "left", "top", "right"),halign="center", valign="center"), rows = (startRowID+repNum*(n-1)):(startRowID+repNum*n-1), cols = 1, gridExpand = TRUE, stack = TRUE)
+	writeFormula(wb, sheet4, x=paste0("=BasicInfos!A", n+16), startCol=1, startRow = startRowID+repNum*(n-1))
+	for(nn in 1:repNum){
+		writeFormula(wb, sheet4, x=paste0("=DosingRecords!E", startRowID+1+(n-1)*repNum+(nn-1)), startCol=2, startRow = startRowID+(n-1)*repNum+(nn-1))
+	}
+	openxlsx::addStyle(wb, sheet4, createStyle(border = c("bottom", "left", "top", "right"),halign="center", valign="center"), rows = (startRowID+repNum*(n-1)):(startRowID+repNum*n-1), cols = 2, gridExpand = TRUE, stack = TRUE)
 }
 
+################################
+###  End of Data Records   #####
+################################
 
-for(j in 1:groupNum){
-	#print(j)
-	addMergedRegion(sheet2, 5 + (j-1)*repNum, j*repNum + 4, 1, 1)
-	CB.setRowData(cb2, paste0("G", j), (j-1)*repNum + 4, rowStyle = cs)
-}
+openxlsx::saveWorkbook(wb, "newRecord.xlsx", overwrite = TRUE)
 
-saveWorkbook(wb, "newRecord.xlsx")
+###################################
+###################################
+####### create record file ########
+###################################
+###################################
 
